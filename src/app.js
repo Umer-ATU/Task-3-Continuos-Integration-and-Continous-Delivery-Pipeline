@@ -1,4 +1,4 @@
-const express = require('express');
+const express = require("express");
 
 /**
  * AWS DevOps pipeline sample API.
@@ -10,11 +10,15 @@ const app = express();
 
 app.use(express.json());
 
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
+app.get("/health", (req, res) => {
+  res.json({ status: "ok" });
 });
 
-app.post('/echo', (req, res) => {
+app.get("/live", (req, res) => {
+  res.json({ status: "server is live" });
+});
+
+app.post("/echo", (req, res) => {
   res.json(req.body || {});
 });
 
