@@ -1,7 +1,6 @@
-/**
- * Simple entry point to demonstrate TypeScript compilation.
- * Pass a name via CLI arg or NAME env var to customize greeting.
- */
+import dotenv from "dotenv";
+dotenv.config();
+
 function greet(name: string = "Developer"): string {
   return `Hello, ${name}! Welcome to your TypeScript starter project.`;
 }
