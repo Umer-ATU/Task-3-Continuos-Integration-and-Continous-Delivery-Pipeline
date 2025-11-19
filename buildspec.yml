@@ -33,3 +33,4 @@ artifacts:
   files:
     - app/imageDetail.json
     - k8s/*
+    - buildspec-deploy.yml
