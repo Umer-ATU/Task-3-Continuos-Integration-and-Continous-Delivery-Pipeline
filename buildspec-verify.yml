@@ -4,19 +4,15 @@ phases:
     runtime-versions:
       nodejs: 18
     commands:
-      - cd app
-      - npm ci
+      - cd "$CODEBUILD_SRC_DIR/app" && npm ci
   build:
     commands:
-      - cd app
-      - npm run lint
-      - npm test
-      - npm run build
+      - cd "$CODEBUILD_SRC_DIR/app" && npm run lint
+      - cd "$CODEBUILD_SRC_DIR/app" && npm test
+      - cd "$CODEBUILD_SRC_DIR/app" && npm run build
   post_build:
     commands:
-      - cd app
-      - rm -rf node_modules
-      - cd ..
+      - cd "$CODEBUILD_SRC_DIR/app" && rm -rf node_modules
 artifacts:
   files:
     - app/**/*
