@@ -1,0 +1,26 @@
+version: 0.2
+env:
+  variables:
+    AWS_DEFAULT_REGION: "eu-west-1"
+    EKS_CLUSTER_NAME: "devops-pipeline-demo"
+    K8S_NAMESPACE: "devops-demo"
+phases:
+  install:
+    commands:
+      - curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+      - chmod +x kubectl
+      - mv kubectl /usr/local/bin/
+      - yum install -y jq
+  pre_build:
+    commands:
+      - aws eks update-kubeconfig --region $AWS_DEFAULT_REGION --name $EKS_CLUSTER_NAME
+  build:
+    commands:
+      - IMAGE_URI=$(cat app/imageDetail.json | jq -r '.imageUri')
+      - kubectl apply -f k8s/namespace.yaml
+      - kubectl apply -f k8s/deployment.yaml
+      - kubectl apply -f k8s/service.yaml
+      - kubectl set image deployment/devops-demo-api api=$IMAGE_URI -n $K8S_NAMESPACE --record
+  post_build:
+    commands:
+      - kubectl rollout status deployment/devops-demo-api -n $K8S_NAMESPACE

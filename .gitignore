@@ -1,12 +1,27 @@
-node_modules
+# Node / JS
+node_modules/
 package-lock.json
-dist
+dist/
 .env
 .DS_Store
-.vscode
-.idea
-coverage
+.vscode/
+.idea/
+coverage/
 npm-debug.log
 yarn-error.log
 *.log
 *.tsbuildinfo
+
+# Terraform
+/infra/.terraform/
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+plan.out
+*.tfvars
+*.tfplan
+
+# OS / IDE
+*.DS_Store
+*.swp

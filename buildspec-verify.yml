@@ -1,0 +1,26 @@
+version: 0.2
+phases:
+  install:
+    runtime-versions:
+      nodejs: 18
+    commands:
+      - cd app
+      - npm ci
+  build:
+    commands:
+      - cd app
+      - npm run lint
+      - npm test
+      - npm run build
+  post_build:
+    commands:
+      - cd app
+      - rm -rf node_modules
+      - cd ..
+artifacts:
+  files:
+    - app/**/*
+    - infra/**/*
+    - k8s/**/*
+    - buildspec*.yml
+    - README.md
