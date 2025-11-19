@@ -69,6 +69,11 @@ resource "aws_eks_cluster" "this" {
   role_arn = aws_iam_role.eks_cluster.arn
   version  = var.eks_version
 
+  access_config {
+    authentication_mode                         = "API_AND_CONFIG_MAP"
+    bootstrap_cluster_creator_admin_permissions = true
+  }
+
   vpc_config {
     security_group_ids      = [aws_security_group.eks_cluster.id]
     subnet_ids              = concat(aws_subnet.public[*].id, aws_subnet.private[*].id)
@@ -108,4 +113,22 @@ resource "aws_eks_node_group" "default" {
     aws_iam_role_policy_attachment.eks_nodes_AmazonEKS_CNI_Policy,
     aws_iam_role_policy_attachment.eks_nodes_AmazonEC2ContainerRegistryReadOnly
   ]
+}
+
+resource "aws_eks_access_entry" "codebuild_deploy" {
+  cluster_name  = aws_eks_cluster.this.name
+  principal_arn = aws_iam_role.codebuild_deploy.arn
+  type          = "STANDARD"
+}
+
+resource "aws_eks_access_policy_association" "codebuild_deploy_admin" {
+  cluster_name  = aws_eks_cluster.this.name
+  principal_arn = aws_iam_role.codebuild_deploy.arn
+  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+
+  access_scope {
+    type = "cluster"
+  }
+
+  depends_on = [aws_eks_access_entry.codebuild_deploy]
 }
