@@ -8,11 +8,12 @@ metadata:
     project: devops-pipeline-demo
     environment: dev
 spec:
-  type: LoadBalancer
+  type: NodePort
   ports:
     - name: http
       port: 80
       targetPort: 8080
       protocol: TCP
+      nodePort: 30080
   selector:
     app: devops-demo-api

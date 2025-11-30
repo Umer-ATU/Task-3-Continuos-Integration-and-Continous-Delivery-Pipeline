@@ -88,7 +88,33 @@ locals {
    ```
 4. Confirm the SNS subscription email to start receiving CloudWatch notifications.
 
-The apply will create the network, cluster, IAM roles, CodeBuild projects, CodePipeline, CloudWatch lifts, and ECR repository. When the pipeline runs the first time, CodeBuild also creates the ECR image and deploys the manifests to EKS.
+The apply will create the net
+│ Error: creating CloudWatch Logs Log Group (/aws/eks/devops-pipeline-demo/cluster): operation error CloudWatch Logs: CreateLogGroup, https response error StatusCode: 400, RequestID: d963e0a3-1306-4d40-a04f-0bfce5bf1a5d, ResourceAlreadyExistsException: The specified log group already exists
+│ 
+│   with aws_cloudwatch_log_group.eks,
+│   on cloudwatch.tf line 1, in resource "aws_cloudwatch_log_group" "eks":
+│    1: resource "aws_cloudwatch_log_group" "eks" {work, cluster, IAM roles, CodeBuild projects, CodePipeline, CloudWatch lifts, and ECR repository. When the pipeline runs the first time, CodeBuild also creates the ECR image and deploys the manifests to EKS.
+
+### Network & load balancer layout
+
+- VPC with two AZs, each with a public subnet (IGW) and a private subnet (used by the node group).
+- NAT gateway per AZ so private subnets keep egress if one AZ fails.
+- Public-facing Application Load Balancer across both public subnets with a basic HTTP listener/target group.
+- The Kubernetes Service is `type: NodePort` on `30080`; the ALB target group forwards HTTP to that NodePort. Keep `alb_target_port` in `infra/terraform.tfvars` aligned with the NodePort value. After Terraform apply, register the worker node Auto Scaling Group(s) with the target group (you can script this via AWS CLI `elbv2 register-targets`).
+
+### Tearing everything down safely
+
+The Kubernetes resources are created by CodeBuild (via `kubectl`) and **not** tracked by Terraform. Delete them before destroying the infrastructure so AWS can release the load balancer ENIs and security groups:
+
+```bash
+kubectl delete -f k8s/namespace.yaml
+kubectl delete -f k8s/deployment.yaml
+kubectl delete -f k8s/service.yaml
+# optional: verify no services with type=LoadBalancer remain
+kubectl get svc -A
+```
+
+After the cluster objects are gone, run `terraform destroy` from `infra/`. Skipping the Kubernetes cleanup leaves the `type: LoadBalancer` service’s AWS resources behind, which blocks EKS/VPC teardown.
 
 ## CI/CD flow
 

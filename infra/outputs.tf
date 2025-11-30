@@ -12,3 +12,8 @@ output "codepipeline_name" {
   description = "Continuous delivery pipeline"
   value       = aws_codepipeline.cicd.name
 }
+
+output "alb_dns_name" {
+  description = "Application Load Balancer DNS name"
+  value       = aws_lb.application.dns_name
+}

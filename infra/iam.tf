@@ -139,8 +139,8 @@ resource "aws_iam_role_policy" "codebuild_inline" {
         Resource = ["${aws_cloudwatch_log_group.codebuild.arn}:*"]
       },
       {
-        Effect = "Allow"
-        Action = ["s3:GetObject", "s3:PutObject"]
+        Effect   = "Allow"
+        Action   = ["s3:GetObject", "s3:PutObject"]
         Resource = ["${aws_s3_bucket.codepipeline_artifacts.arn}/*"]
       },
       {
@@ -214,8 +214,8 @@ resource "aws_iam_role_policy" "codebuild_deploy_inline" {
         Resource = "*"
       },
       {
-        Effect = "Allow"
-        Action = ["iam:PassRole"]
+        Effect   = "Allow"
+        Action   = ["iam:PassRole"]
         Resource = [aws_iam_role.eks_nodes.arn]
       }
     ]

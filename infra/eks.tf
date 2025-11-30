@@ -1,5 +1,12 @@
+locals {
+  eks_cluster_security_group_name = "${var.project_name}-cluster-sg"
+  eks_node_security_group_name    = "${var.project_name}-nodes-sg"
+  eks_node_group_name             = "${var.project_name}-ng"
+  eks_node_group_tag              = "${var.project_name}-node-group"
+}
+
 resource "aws_security_group" "eks_cluster" {
-  name        = "${var.project_name}-cluster-sg"
+  name        = local.eks_cluster_security_group_name
   description = "Security group for EKS control plane"
   vpc_id      = aws_vpc.main.id
 
@@ -10,11 +17,11 @@ resource "aws_security_group" "eks_cluster" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = merge(local.tags, { Name = "${var.project_name}-cluster-sg" })
+  tags = merge(local.tags, { Name = local.eks_cluster_security_group_name })
 }
 
 resource "aws_security_group" "eks_nodes" {
-  name        = "${var.project_name}-nodes-sg"
+  name        = local.eks_node_security_group_name
   description = "Security group for worker nodes"
   vpc_id      = aws_vpc.main.id
 
@@ -27,11 +34,19 @@ resource "aws_security_group" "eks_nodes" {
   }
 
   ingress {
-    description      = "Allow API server to talk to nodes"
-    from_port        = 443
-    to_port          = 443
-    protocol         = "tcp"
-    security_groups  = [aws_security_group.eks_cluster.id]
+    description     = "Allow API server to talk to nodes"
+    from_port       = 443
+    to_port         = 443
+    protocol        = "tcp"
+    security_groups = [aws_security_group.eks_cluster.id]
+  }
+
+  ingress {
+    description     = "Allow ALB to reach NodePort traffic"
+    from_port       = var.alb_target_port
+    to_port         = var.alb_target_port
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb.id]
   }
 
   egress {
@@ -41,7 +56,7 @@ resource "aws_security_group" "eks_nodes" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = merge(local.tags, { Name = "${var.project_name}-nodes-sg" })
+  tags = merge(local.tags, { Name = local.eks_node_security_group_name })
 }
 
 resource "aws_security_group_rule" "cluster_to_nodes" {
@@ -82,7 +97,7 @@ resource "aws_eks_cluster" "this" {
   }
 
   enabled_cluster_log_types = ["api", "audit", "authenticator"]
-  tags = merge(local.tags, { Name = var.cluster_name })
+  tags                      = merge(local.tags, { Name = var.cluster_name })
 
   depends_on = [
     aws_iam_role_policy_attachment.eks_cluster_AmazonEKSClusterPolicy,
@@ -92,21 +107,21 @@ resource "aws_eks_cluster" "this" {
 
 resource "aws_eks_node_group" "default" {
   cluster_name    = aws_eks_cluster.this.name
-  node_group_name = "${var.project_name}-ng"
+  node_group_name = local.eks_node_group_name
   node_role_arn   = aws_iam_role.eks_nodes.arn
   subnet_ids      = aws_subnet.private[*].id
-  instance_types  = ["t3.small"]
+  instance_types  = var.eks_node_instance_types
   scaling_config {
-    desired_size = 2
-    max_size     = 3
-    min_size     = 1
+    desired_size = var.eks_node_desired_size
+    max_size     = var.eks_node_max_size
+    min_size     = var.eks_node_min_size
   }
 
   update_config {
     max_unavailable = 1
   }
 
-  tags = merge(local.tags, { Name = "${var.project_name}-node-group" })
+  tags = merge(local.tags, { Name = local.eks_node_group_tag })
 
   depends_on = [
     aws_iam_role_policy_attachment.eks_nodes_AmazonEKSWorkerNodePolicy,

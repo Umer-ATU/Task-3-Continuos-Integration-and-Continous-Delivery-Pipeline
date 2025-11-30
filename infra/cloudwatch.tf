@@ -28,7 +28,7 @@ resource "aws_cloudwatch_metric_alarm" "lb_5xx" {
   alarm_description   = "Alert when the public load balancer reports sustained 5xx errors"
 
   dimensions = {
-    LoadBalancer = var.application_load_balancer_name
+    LoadBalancer = aws_lb.application.arn_suffix
   }
 
   alarm_actions = [aws_sns_topic.alarms.arn]
