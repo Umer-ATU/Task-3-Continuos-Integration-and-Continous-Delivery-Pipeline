@@ -60,3 +60,8 @@ resource "aws_lb_listener" "http" {
     target_group_arn = aws_lb_target_group.application.arn
   }
 }
+
+resource "aws_autoscaling_attachment" "eks_nodes" {
+  autoscaling_group_name = aws_eks_node_group.default.resources[0].autoscaling_groups[0].name
+  lb_target_group_arn    = aws_lb_target_group.application.arn
+}
