@@ -27,7 +27,7 @@ phases:
   post_build:
     commands:
       - echo "Image pushed to ${IMAGE_URI}"
-      - sed -i "s|\${IMAGE_URI}|$IMAGE_URI|g" k8s/deployment.yaml
+      - sed -i "s|\${IMAGE_URI}|$IMAGE_URI|g" "$CODEBUILD_SRC_DIR/k8s/deployment.yaml"
 artifacts:
   files:
     - app/imageDetail.json

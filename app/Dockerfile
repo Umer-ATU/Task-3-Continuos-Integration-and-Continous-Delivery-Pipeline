@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM node:18-bullseye AS build
+FROM public.ecr.aws/docker/library/node:18-bullseye AS build
 WORKDIR /usr/src/app
 COPY package*.json ./
 RUN npm ci
@@ -8,7 +8,7 @@ COPY src ./src
 COPY tests ./tests
 RUN npm run build
 
-FROM node:18-slim AS runtime
+FROM public.ecr.aws/docker/library/node:18-slim AS runtime
 WORKDIR /usr/src/app
 ENV NODE_ENV=production
 COPY package*.json ./
