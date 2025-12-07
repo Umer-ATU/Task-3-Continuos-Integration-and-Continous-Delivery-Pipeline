@@ -14,7 +14,6 @@ const users: UserProfile[] = [
 ];
 
 const usersRouter = Router();
-console.log(users);
 
 usersRouter.get('/', (_, res) => {
   res.json({ count: users.length, users });
