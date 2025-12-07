@@ -54,7 +54,7 @@ resource "aws_codepipeline" "cicd" {
       owner            = "AWS"
       provider         = "CodeBuild"
       version          = "1"
-      input_artifacts  = ["BuildOutput"]
+      input_artifacts  = ["SourceOutput"]
       output_artifacts = ["ImageOutput"]
 
       configuration = {
