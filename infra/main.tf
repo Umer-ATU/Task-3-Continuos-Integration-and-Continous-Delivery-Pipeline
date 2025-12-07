@@ -18,10 +18,10 @@ provider "aws" {
 
 locals {
   tags = {
-    Project     = "DevOpsPipelineDemo"
+    Project     = "l00196895-devops-pipeline-demo"
     Environment = "Dev"
     ManagedBy   = "Terraform"
-    Owner       = "Umer Karachiwala"
+    Owner       = "Umer Karachiwala - l00196895"
     Purpose     = "University DevOps Assignment"
   }
 }

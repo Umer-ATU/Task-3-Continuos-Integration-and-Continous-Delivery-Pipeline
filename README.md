@@ -1,164 +1,148 @@
-# DevOps Pipeline Demo
+# DevOps Pipeline Assignment - Masters Level 9
 
-Minimal-yet-professional reference project that demonstrates a complete CI/CD workflow for a TypeScript API running on Amazon EKS. The repository is intentionally small so a university assignment can focus on the infrastructure story (Terraform → CodePipeline → CodeBuild → ECR → EKS → CloudWatch).
+**Student Name:** Umer Karachiwala  
+**Student ID:** l00196895  
+**Course:** Masters in DevOps  
+**Module:** Task 3 - DevOps Pipeline  
 
-## Architecture overview
+---
 
-- **Application** – Express API written in TypeScript with `/health`, `/hello`, and `/users` routes. It is covered by Jest tests and shipped as a non-root Docker image.
-- **Infrastructure** – Terraform provisions the networking layer, EKS cluster + node group, ECR repository, IAM roles, CodeBuild projects, CodePipeline, and CloudWatch logging/alarms.
-- **Pipeline** – CodePipeline orchestrates Source (GitHub) → Build (CodeBuild verify project) → Package (CodeBuild Docker/ECR project via `buildspec.yml`) → Deploy (CodeBuild kubectl project via `buildspec-deploy.yml`). The Build and Package stages both run in Amazon CodeBuild so every commit is linted, tested, containerized, and rolled out.
-- **Kubernetes** – Straightforward namespace/deployment/service manifests that reference the ECR image, include probes, and expose the service via a load balancer.
-- **Observability** – CloudWatch log groups capture EKS control plane + CodeBuild logs, while SNS-backed alarms watch for ALB 5xx spikes and high node CPU.
+## Project Overview
+
+This project demonstrates a comprehensive, industry-standard DevOps pipeline for deploying a containerized application to a Kubernetes cluster on AWS. It implements Infrastructure as Code (IaC), Continuous Integration (CI), and Continuous Delivery (CD) using Terraform, AWS CodePipeline, AWS CodeBuild, Amazon ECR, and Amazon EKS.
+
+The objective is to showcase a robust, automated, and secure software delivery lifecycle (SDLC) suitable for a modern cloud-native environment.
+
+## Architecture
+
+The solution is built on AWS and consists of the following components:
+
+*   **Infrastructure as Code (IaC):** Terraform is used to provision all AWS resources, ensuring reproducibility and state management.
+*   **Network:** A custom VPC (`10.0.0.0/16`) with 2 Public Subnets and 2 Private Subnets across 2 Availability Zones for high availability.
+*   **Compute:** Amazon EKS (Elastic Kubernetes Service) with a Managed Node Group running in Private Subnets.
+*   **Container Registry:** Amazon ECR (Elastic Container Registry) for storing Docker images.
+*   **CI/CD Pipeline:** AWS CodePipeline orchestrating the flow:
+    1.  **Source:** GitHub (Webhooks trigger the pipeline).
+    2.  **Build (Verify):** CodeBuild runs linting (`npm run lint`) and unit tests (`npm test`).
+    3.  **Package:** CodeBuild builds the Docker image, tags it with the commit ID, and pushes it to ECR.
+    4.  **Deploy:** CodeBuild updates the Kubernetes manifests with the new image URI and applies them to the EKS cluster using `kubectl`.
+*   **Load Balancing:** An Application Load Balancer (ALB) distributes traffic to the EKS nodes.
+*   **Observability:** CloudWatch Logs for build and cluster logs; CloudWatch Alarms for monitoring ALB errors and Node CPU usage.
+
+## Project Structure
 
 ```
 .
-├── app                     # TypeScript API + Dockerfile + Jest tests
-├── infra                   # Terraform IaC grouped by concern
-├── k8s                     # Kubernetes namespace/deployment/service
-├── buildspec-verify.yml    # CodeBuild stage for lint/test compile
-├── buildspec.yml           # CodeBuild stage for Docker build + ECR push
-├── buildspec-deploy.yml    # CodeBuild stage for kubectl deploy to EKS
-└── README.md               # This guide
+├── app/                        # Application Source Code
+│   ├── src/                    # TypeScript Express API
+│   ├── tests/                  # Jest Unit Tests
+│   ├── Dockerfile              # Multi-stage Docker build
+│   └── package.json            # Dependencies and scripts
+├── infra/                      # Terraform Infrastructure Code
+│   ├── main.tf                 # Provider and backend config
+│   ├── vpc.tf                  # Network configuration
+│   ├── eks.tf                  # Kubernetes Cluster & Node Group
+│   ├── codepipeline.tf         # CI/CD Pipeline definition
+│   ├── codebuild-*.tf          # CodeBuild project definitions
+│   └── variables.tf            # Input variables
+├── k8s/                        # Kubernetes Manifests
+│   ├── deployment.yaml         # App Deployment (parameterized)
+│   ├── service.yaml            # NodePort Service
+│   └── namespace.yaml          # K8s Namespace
+├── buildspec.yml               # Build & Package spec
+├── buildspec-verify.yml        # Test & Lint spec
+├── buildspec-deploy.yml        # Deployment spec
+└── README.md                   # Project Documentation
 ```
 
-## Application highlights (`app/`)
+## Prerequisites
 
-- `src/app.ts` wires Express, Helmet, and Morgan plus the three routes.
-- `src/routes/*.ts` keep handlers tiny and readable (each returns JSON/text immediately).
-- `tests/app.test.ts` uses Supertest to verify the routes; Jest is configured through `ts-jest`.
-- `Dockerfile` uses multi-stage builds, installs only production deps in the runtime stage, drops privileges to a non-root user, and defines a `/health` `HEALTHCHECK`.
-- `build` script compiles TypeScript to `dist/`, `start` script runs the compiled bundle.
+To deploy this project, you need the following tools installed:
 
-### Running locally
+*   [Terraform](https://www.terraform.io/) (v1.6+)
+*   [AWS CLI](https://aws.amazon.com/cli/) (v2)
+*   [kubectl](https://kubernetes.io/docs/tasks/tools/)
+*   [Node.js](https://nodejs.org/) (v18+) & npm (for local app testing)
+*   [Docker](https://www.docker.com/) (for local container testing)
 
+## Configuration
+
+The infrastructure is highly configurable via `infra/variables.tf`. Key variables include:
+
+*   `project_name`: `l00196895-devops-pipeline-demo`
+*   `vpc_cidr`: `10.0.0.0/16` (Assignment Requirement)
+*   `public_subnets`: `["10.0.1.0/24", "10.0.2.0/24"]`
+*   `private_subnets`: `["10.0.10.0/24", "10.0.20.0/24"]`
+
+**Sensitive Data:**
+Sensitive variables like `github_oauth_token` should be set in a `terraform.tfvars` file (which is git-ignored) or passed as environment variables.
+
+Example `infra/terraform.tfvars`:
+```hcl
+github_owner       = "Umer-ATU"
+github_repo        = "Task-3-Continuos-Integration-and-Continous-Delivery-Pipeline"
+github_oauth_token = "your-github-token"
+alarm_topic_email  = "your-email@example.com"
+```
+
+## Deployment Instructions
+
+### 1. Local Application Testing (Optional)
 ```bash
 cd app
 npm install
-npm run dev      # hot reload via ts-node-dev
-npm test         # executes the Jest suite
-npm run build && npm start  # production build
+npm test
+npm run build
 ```
 
-### Docker locally
+### 2. Infrastructure Deployment
+1.  Navigate to the infrastructure directory:
+    ```bash
+    cd infra
+    ```
+2.  Initialize Terraform:
+    ```bash
+    terraform init
+    ```
+3.  Plan the deployment:
+    ```bash
+    terraform plan -out plan.out
+    ```
+4.  Apply the configuration:
+    ```bash
+    terraform apply plan.out
+    ```
+    *Type `yes` when prompted.*
 
-```bash
-cd app
-docker build -t devops-demo-api .
-docker run -p 8080:8080 devops-demo-api
-```
+### 3. Post-Deployment
+1.  **Confirm Subscription:** Check your email for a subscription confirmation from AWS SNS and click the link to receive alerts.
+2.  **Access Application:**
+    *   Get the ALB DNS name from the AWS Console (EC2 -> Load Balancers).
+    *   Visit `http://<ALB-DNS-NAME>/health` to verify the app is running.
 
-## Terraform walkthrough (`infra/`)
+## CI/CD Workflow Details
 
-Terraform follows a clean “one concern per file” layout:
+1.  **Commit:** Developer pushes code to the `main` branch.
+2.  **Trigger:** CodePipeline detects the change via Webhook.
+3.  **Verify:** CodeBuild checks out the code, installs dependencies, runs linting, and executes unit tests. If this fails, the pipeline stops.
+4.  **Package:**
+    *   CodeBuild builds the Docker image.
+    *   Tags the image with the commit hash and timestamp.
+    *   Pushes the image to Amazon ECR.
+    *   Updates `k8s/deployment.yaml` replacing `${IMAGE_URI}` with the new image location.
+5.  **Deploy:**
+    *   CodeBuild assumes a role with access to the EKS cluster.
+    *   Updates the `kubeconfig`.
+    *   Applies the updated manifests (`kubectl apply`).
+    *   Verifies the rollout status (`kubectl rollout status`).
 
-- `main.tf` – provider, opinionated tags, and the S3 bucket/log group used by CodePipeline/CodeBuild.
-- `variables.tf` / `outputs.tf` – configurable inputs such as `github_owner`, `github_repo`, `alarm_topic_email`, plus outputs for the EKS cluster, ECR URL, and pipeline name.
-- `vpc/vpc.tf` – creates a /16 VPC, public/private subnets across AZs, an internet gateway, NAT gateway, and the required route tables.
-- `eks/eks.tf` – security groups, the managed EKS control plane, and a managed node group.
-- `ecr/ecr.tf` – single repository with tag immutability, encryption, and retention policy.
-- `iam/roles.tf` – IAM roles + policies for CodePipeline, the two CodeBuild projects, and the EKS cluster/nodes.
-- `codebuild/*.tf` – three CodeBuild projects (verify/tests, package+push, kubectl deploy) mapped to the buildspecs at the repo root.
-- `codepipeline/pipeline.tf` – a four-stage pipeline with GitHub source, CodeBuild verify stage, CodeBuild package stage, and CodeBuild deploy stage.
-- `cloudwatch/monitoring.tf` – log groups, SNS topic/subscription, and alarms for ALB 5xx plus node CPU.
+## Design Decisions & Justification
 
-Every AWS resource receives the academic tags requested in the brief:
+*   **EKS vs ECS:** EKS was chosen to demonstrate Kubernetes expertise, a critical skill in modern DevOps, allowing for granular control over orchestration and scaling.
+*   **Private Nodes:** Worker nodes are placed in private subnets for security, preventing direct internet access. Outbound traffic is routed via NAT Gateways.
+*   **Immutable Infrastructure:** Docker images are tagged uniquely per build, ensuring that every deployment is traceable to a specific version of the code.
+*   **Infrastructure as Code:** Terraform allows the entire environment to be spun up or torn down in minutes, eliminating configuration drift.
 
-```hcl
-locals {
-  tags = {
-    Project     = "DevOpsPipelineDemo"
-    Environment = "Dev"
-    ManagedBy   = "Terraform"
-    Owner       = "Umer Karachiwala"
-    Purpose     = "University DevOps Assignment"
-  }
-}
-```
+## License
 
-### Deploying with Terraform
-
-1. Export AWS credentials for the destination account.
-2. Populate `terraform.tfvars` (or CLI vars) with GitHub repo info, OAuth token, email address for alarms, and any CIDR overrides.
-3. Initialize and apply:
-   ```bash
-   cd infra
-   terraform init
-   terraform plan -out plan.out
-   terraform apply plan.out
-   ```
-4. Confirm the SNS subscription email to start receiving CloudWatch notifications.
-
-The apply will create the net
-│ Error: creating CloudWatch Logs Log Group (/aws/eks/devops-pipeline-demo/cluster): operation error CloudWatch Logs: CreateLogGroup, https response error StatusCode: 400, RequestID: d963e0a3-1306-4d40-a04f-0bfce5bf1a5d, ResourceAlreadyExistsException: The specified log group already exists
-│ 
-│   with aws_cloudwatch_log_group.eks,
-│   on cloudwatch.tf line 1, in resource "aws_cloudwatch_log_group" "eks":
-│    1: resource "aws_cloudwatch_log_group" "eks" {work, cluster, IAM roles, CodeBuild projects, CodePipeline, CloudWatch lifts, and ECR repository. When the pipeline runs the first time, CodeBuild also creates the ECR image and deploys the manifests to EKS.
-
-### Network & load balancer layout
-
-- VPC with two AZs, each with a public subnet (IGW) and a private subnet (used by the node group).
-- NAT gateway per AZ so private subnets keep egress if one AZ fails.
-- Public-facing Application Load Balancer across both public subnets with a basic HTTP listener/target group.
-- The Kubernetes Service is `type: NodePort` on `30080`; the ALB target group forwards HTTP to that NodePort. Keep `alb_target_port` in `infra/terraform.tfvars` aligned with the NodePort value. After Terraform apply, register the worker node Auto Scaling Group(s) with the target group (you can script this via AWS CLI `elbv2 register-targets`).
-
-### Tearing everything down safely
-
-The Kubernetes resources are created by CodeBuild (via `kubectl`) and **not** tracked by Terraform. Delete them before destroying the infrastructure so AWS can release the load balancer ENIs and security groups:
-
-```bash
-kubectl delete -f k8s/namespace.yaml
-kubectl delete -f k8s/deployment.yaml
-kubectl delete -f k8s/service.yaml
-# optional: verify no services with type=LoadBalancer remain
-kubectl get svc -A
-```
-
-After the cluster objects are gone, run `terraform destroy` from `infra/`. Skipping the Kubernetes cleanup leaves the `type: LoadBalancer` service’s AWS resources behind, which blocks EKS/VPC teardown.
-
-## CI/CD flow
-
-1. **Source** – CodePipeline monitors the GitHub repository/branch configured via Terraform. CodePipeline’s artifact bucket is encrypted and versioned.
-2. **Build (Verify stage)** – `aws_codebuild_project.build` executes `buildspec-verify.yml`, which runs `npm ci`, `npm run lint`, `npm test`, and `npm run build`. The workspace is zipped and passed to the next stage as `BuildOutput`.
-3. **Package (ECR stage)** – `aws_codebuild_project.package` uses `buildspec.yml` to rebuild, run tests again for safety, build the Docker image, log in to ECR, push the tagged image, and emit `app/imageDetail.json` describing the pushed tag.
-4. **Deploy (EKS stage)** – `aws_codebuild_project.deploy` consumes the packaged artifact, obtains `kubectl` + `jq`, updates the kubeconfig for the target cluster, applies the namespace/deployment/service manifests from `/k8s`, and performs a rolling update with `kubectl set image` + rollout status.
-5. **Observability** – EKS control plane logs stream to CloudWatch, ALB/node alarms notify the SNS topic, and build logs live under `/aws/codebuild/<project>` for troubleshooting.
-
-## Kubernetes manifests (`k8s/`)
-
-- `namespace.yaml` – isolates workloads under `devops-demo`.
-- `deployment.yaml` – 2 replicas, readiness/liveness probes on `/health`, CPU/memory requests+limits, and environment variables for the container. Replace the placeholder ECR image URI with the repository Terraform outputs.
-- `service.yaml` – LoadBalancer service with port 80 → container port 8080; selectors match the deployment labels.
-
-## AWS credentials & secrets
-
-- GitHub personal access token (`github_oauth_token`) is stored as a Terraform variable and injected only into the CodePipeline Source action.
-- CodeBuild service roles are least-privilege: the verify and package projects reuse the same role with ECR/S3/CloudWatch permissions, while deploy uses a separate role that can call `eks:DescribeCluster` and invoke `kubectl`.
-- Kubernetes deploys rely on the AWS IAM role assigned to the deploy CodeBuild project instead of embedding kubeconfig secrets.
-
-## Monitoring & alarms
-
-- `/aws/eks/<cluster>/cluster` log group captures API server/audit/authenticator logs.
-- `/aws/codebuild/<project>` streams gather CodeBuild logs for all three stages.
-- CloudWatch alarms notify the SNS topic (confirm the subscription!) when ALB 5xx count spikes or when average node CPU exceeds 75%.
-
-## How to test the app manually
-
-After CodePipeline deploys, grab the external load balancer DNS name from the Kubernetes service and send sample requests:
-
-```bash
-curl http://<elb-dns>/health
-curl http://<elb-dns>/hello
-curl http://<elb-dns>/users | jq
-```
-
-You can also port-forward locally via `kubectl port-forward svc/devops-demo-api 8080:80 -n devops-demo` and hit `http://localhost:8080`.
-
-## Next steps / customization ideas
-
-1. Add an RDS or DynamoDB module if you need persistent data.
-2. Extend the pipeline with a Manual Approval stage before production deployments.
-3. Swap GitHub for CodeCommit by changing only the Terraform variables.
-4. Use Kubernetes secrets or ConfigMaps to parameterize the API further.
-
-This repository now captures an end-to-end DevOps story (app → Docker → Terraform → AWS services → Kubernetes) in a compact, academic-friendly format. Have fun demoing it! 🎓
+This project is for educational purposes as part of the Masters in DevOps program at ATU.

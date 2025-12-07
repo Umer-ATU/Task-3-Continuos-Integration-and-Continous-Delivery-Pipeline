@@ -1,9 +1,7 @@
 version: 0.2
 env:
   variables:
-    AWS_ACCOUNT_ID: "123456789012"
     AWS_DEFAULT_REGION: "eu-west-1"
-    IMAGE_REPO_NAME: "devops-pipeline-demo"
   exported-variables:
     - IMAGE_TAG
 phases:
@@ -29,6 +27,7 @@ phases:
   post_build:
     commands:
       - echo "Image pushed to ${IMAGE_URI}"
+      - sed -i "s|\${IMAGE_URI}|$IMAGE_URI|g" k8s/deployment.yaml
 artifacts:
   files:
     - app/imageDetail.json

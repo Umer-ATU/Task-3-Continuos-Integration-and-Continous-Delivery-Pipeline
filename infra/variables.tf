@@ -13,7 +13,7 @@ variable "aws_account_id" {
 variable "project_name" {
   description = "Name used for tagging and resource names"
   type        = string
-  default     = "devops-pipeline-demo"
+  default     = "l00196895-devops-pipeline-demo"
 }
 
 variable "cluster_name" {
@@ -55,15 +55,15 @@ variable "eks_node_max_size" {
 variable "vpc_cidr" {
   description = "Primary CIDR block for the VPC"
   type        = string
-  default     = "10.20.0.0/16"
+  default     = "10.0.0.0/16"
 }
 
 variable "public_subnets" {
   description = "CIDR blocks for public subnets"
   type        = list(string)
   default = [
-    "10.20.1.0/24",
-    "10.20.2.0/24"
+    "10.0.1.0/24",
+    "10.0.2.0/24"
   ]
 }
 
@@ -71,8 +71,8 @@ variable "private_subnets" {
   description = "CIDR blocks for private subnets"
   type        = list(string)
   default = [
-    "10.20.11.0/24",
-    "10.20.12.0/24"
+    "10.0.10.0/24",
+    "10.0.20.0/24"
   ]
 }
 
