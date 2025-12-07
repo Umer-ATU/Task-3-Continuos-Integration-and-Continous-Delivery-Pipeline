@@ -43,8 +43,8 @@ resource "aws_security_group" "eks_nodes" {
 
   ingress {
     description     = "Allow ALB to reach NodePort traffic"
-    from_port       = var.alb_target_port
-    to_port         = var.alb_target_port
+    from_port       = 30000
+    to_port         = 32767
     protocol        = "tcp"
     security_groups = [aws_security_group.alb.id]
   }
