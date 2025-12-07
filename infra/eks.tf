@@ -105,12 +105,31 @@ resource "aws_eks_cluster" "this" {
   ]
 }
 
+resource "aws_launch_template" "eks_nodes" {
+  name = "${var.project_name}-node-template"
+
+  vpc_security_group_ids = [
+    aws_security_group.eks_nodes.id,
+    aws_eks_cluster.this.vpc_config[0].cluster_security_group_id
+  ]
+
+  tag_specifications {
+    resource_type = "instance"
+    tags          = merge(local.tags, { Name = local.eks_node_group_tag })
+  }
+}
+
 resource "aws_eks_node_group" "default" {
   cluster_name    = aws_eks_cluster.this.name
   node_group_name = local.eks_node_group_name
   node_role_arn   = aws_iam_role.eks_nodes.arn
   subnet_ids      = aws_subnet.private[*].id
-  instance_types  = var.eks_node_instance_types
+  
+  launch_template {
+    id      = aws_launch_template.eks_nodes.id
+    version = "$Latest"
+  }
+
   scaling_config {
     desired_size = var.eks_node_desired_size
     max_size     = var.eks_node_max_size
